@@ -175,7 +175,7 @@ function generateDefines( defines ) {
 
 }
 
-function fetchAttributeLocations( gl, program ) {
+function readWebGLAttributeLocations( gl, program ) {
 
 	const attributes = {};
 
@@ -947,7 +947,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 		gl.deleteShader( glFragmentShader );
 
 		cachedUniforms = new WebGLUniforms( gl, program );
-		cachedAttributes = fetchAttributeLocations( gl, program );
+		cachedAttributes = readWebGLAttributeLocations( gl, program );
 
 	}
 

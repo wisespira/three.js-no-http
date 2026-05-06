@@ -32,7 +32,8 @@ class Loader {
 		this.crossOrigin = 'anonymous';
 
 		/**
-		 * Whether the XMLHttpRequest uses credentials.
+		 * Whether cross-origin load requests should include credentials (cookies,
+		 * authorization headers, or TLS client certificates) where applicable.
 		 *
 		 * @type {boolean}
 		 * @default false
@@ -54,8 +55,8 @@ class Loader {
 		this.resourcePath = '';
 
 		/**
-		 * The [request header](https://developer.mozilla.org/en-US/docs/Glossary/Request_header)
-		 * used in HTTP request.
+		 * Optional name/value pairs passed to loaders that support custom headers
+		 * on outbound requests.
 		 *
 		 * @type {Object<string, any>}
 		 */
@@ -124,8 +125,7 @@ class Loader {
 	}
 
 	/**
-	 * Whether the XMLHttpRequest uses credentials such as cookies, authorization
-	 * headers or TLS client certificates, see [XMLHttpRequest.withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials).
+	 * Sets {@link Loader#withCredentials}.
 	 *
 	 * Note: This setting has no effect if you are loading files locally or from the same domain.
 	 *
@@ -166,10 +166,9 @@ class Loader {
 	}
 
 	/**
-	 * Sets the given request header.
+	 * Sets the given request header map for loaders that honor {@link Loader#requestHeader}.
 	 *
-	 * @param {Object} requestHeader - A [request header](https://developer.mozilla.org/en-US/docs/Glossary/Request_header)
-	 * for configuring the HTTP request.
+	 * @param {Object} requestHeader - Header names and values.
 	 * @return {Loader} A reference to this instance.
 	 */
 	setRequestHeader( requestHeader ) {

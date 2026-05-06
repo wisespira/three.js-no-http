@@ -2771,7 +2771,7 @@ class PMREMGenerator {
 
 	/**
 	 * Pre-compiles the cubemap shader. You can get faster start-up by invoking this method during
-	 * your texture's network fetch for increased concurrency.
+	 * your texture's loading step for increased concurrency.
 	 */
 	compileCubemapShader() {
 
@@ -2786,7 +2786,7 @@ class PMREMGenerator {
 
 	/**
 	 * Pre-compiles the equirectangular shader. You can get faster start-up by invoking this method during
-	 * your texture's network fetch for increased concurrency.
+	 * your texture's loading step for increased concurrency.
 	 */
 	compileEquirectangularShader() {
 
@@ -6409,7 +6409,7 @@ function generateDefines( defines ) {
 
 }
 
-function fetchAttributeLocations( gl, program ) {
+function readWebGLAttributeLocations( gl, program ) {
 
 	const attributes = {};
 
@@ -7181,7 +7181,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 		gl.deleteShader( glFragmentShader );
 
 		cachedUniforms = new WebGLUniforms( gl, program );
-		cachedAttributes = fetchAttributeLocations( gl, program );
+		cachedAttributes = readWebGLAttributeLocations( gl, program );
 
 	}
 

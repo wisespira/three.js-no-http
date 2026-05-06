@@ -43710,7 +43710,8 @@ class Loader {
 		this.crossOrigin = 'anonymous';
 
 		/**
-		 * Whether the XMLHttpRequest uses credentials.
+		 * Whether cross-origin load requests should include credentials (cookies,
+		 * authorization headers, or TLS client certificates) where applicable.
 		 *
 		 * @type {boolean}
 		 * @default false
@@ -43732,8 +43733,8 @@ class Loader {
 		this.resourcePath = '';
 
 		/**
-		 * The [request header](https://developer.mozilla.org/en-US/docs/Glossary/Request_header)
-		 * used in HTTP request.
+		 * Optional name/value pairs passed to loaders that support custom headers
+		 * on outbound requests.
 		 *
 		 * @type {Object<string, any>}
 		 */
@@ -43802,8 +43803,7 @@ class Loader {
 	}
 
 	/**
-	 * Whether the XMLHttpRequest uses credentials such as cookies, authorization
-	 * headers or TLS client certificates, see [XMLHttpRequest.withCredentials](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials).
+	 * Sets {@link Loader#withCredentials}.
 	 *
 	 * Note: This setting has no effect if you are loading files locally or from the same domain.
 	 *
@@ -43844,10 +43844,9 @@ class Loader {
 	}
 
 	/**
-	 * Sets the given request header.
+	 * Sets the given request header map for loaders that honor {@link Loader#requestHeader}.
 	 *
-	 * @param {Object} requestHeader - A [request header](https://developer.mozilla.org/en-US/docs/Glossary/Request_header)
-	 * for configuring the HTTP request.
+	 * @param {Object} requestHeader - Header names and values.
 	 * @return {Loader} A reference to this instance.
 	 */
 	setRequestHeader( requestHeader ) {
@@ -62398,7 +62397,7 @@ class PMREMGenerator {
 
 	/**
 	 * Pre-compiles the cubemap shader. You can get faster start-up by invoking this method during
-	 * your texture's network fetch for increased concurrency.
+	 * your texture's loading step for increased concurrency.
 	 */
 	compileCubemapShader() {
 
@@ -62413,7 +62412,7 @@ class PMREMGenerator {
 
 	/**
 	 * Pre-compiles the equirectangular shader. You can get faster start-up by invoking this method during
-	 * your texture's network fetch for increased concurrency.
+	 * your texture's loading step for increased concurrency.
 	 */
 	compileEquirectangularShader() {
 
@@ -66036,7 +66035,7 @@ function generateDefines( defines ) {
 
 }
 
-function fetchAttributeLocations( gl, program ) {
+function readWebGLAttributeLocations( gl, program ) {
 
 	const attributes = {};
 
@@ -66808,7 +66807,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 		gl.deleteShader( glFragmentShader );
 
 		cachedUniforms = new WebGLUniforms( gl, program );
-		cachedAttributes = fetchAttributeLocations( gl, program );
+		cachedAttributes = readWebGLAttributeLocations( gl, program );
 
 	}
 

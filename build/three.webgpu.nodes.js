@@ -25920,7 +25920,7 @@ class PMREMGenerator {
 
 	/**
 	 * Pre-compiles the cubemap shader. You can get faster start-up by invoking this method during
-	 * your texture's network fetch for increased concurrency.
+	 * your texture's loading step for increased concurrency.
 	 *
 	 * @returns {Promise}
 	 */
@@ -25937,7 +25937,7 @@ class PMREMGenerator {
 
 	/**
 	 * Pre-compiles the equirectangular shader. You can get faster start-up by invoking this method during
-	 * your texture's network fetch for increased concurrency.
+	 * your texture's loading step for increased concurrency.
 	 *
 	 * @returns {Promise}
 	 */
