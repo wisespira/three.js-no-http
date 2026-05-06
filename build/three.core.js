@@ -49376,9 +49376,51 @@ const TEXTURE_FILTER = {
 const _errorMap = new WeakMap();
 
 /**
+ * @param {string} url
+ * @return {Blob}
+ */
+function dataUriToBlob( url ) {
+
+	const comma = url.indexOf( ',' );
+	if ( comma < 0 || ! url.startsWith( 'data:' ) ) {
+
+		throw new Error( 'ImageBitmapLoader: Malformed data URI.' );
+
+	}
+
+	const meta = url.slice( 5, comma );
+	const dataPart = url.slice( comma + 1 );
+	const isBase64 = /;base64/i.test( meta );
+	const mediatype = ( meta.replace( /;base64/i, '' ).replace( /^;+/, '' ).trim() ) || 'text/plain;charset=US-ASCII';
+	const blobType = mediatype.split( ';' )[ 0 ] || 'application/octet-stream';
+
+	if ( isBase64 ) {
+
+		const b64 = dataPart.replace( /\s/g, '' );
+		const binary = atob( b64 );
+		const len = binary.length;
+		const bytes = new Uint8Array( len );
+		for ( let i = 0; i < len; i ++ ) {
+
+			bytes[ i ] = binary.charCodeAt( i );
+
+		}
+
+		return new Blob( [ bytes ], { type: blobType } );
+
+	}
+
+	return new Blob( [ decodeURIComponent( dataPart ) ], { type: blobType } );
+
+}
+
+/**
  * A loader for loading images as an [ImageBitmap](https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap).
  * An `ImageBitmap` provides an asynchronous and resource efficient pathway to prepare
  * textures for rendering.
+ *
+ * This build does not use network requests: only `data:` URIs and {@link Cache} are supported
+ * (for example for Power BI–style restricted hosts).
  *
  * Note that {@link Texture#flipY} and {@link Texture#premultiplyAlpha} are ignored with image bitmaps.
  * These options need to be configured via {@link ImageBitmapLoader#setOptions} prior to loading,
@@ -49395,7 +49437,7 @@ const _errorMap = new WeakMap();
  * ```js
  * const loader = new THREE.ImageBitmapLoader();
  * loader.setOptions( { imageOrientation: 'flipY' } ); // set options if needed
- * const imageBitmap = await loader.loadAsync( 'image.png' );
+ * const imageBitmap = await loader.loadAsync( 'data:image/png;base64,...' );
  *
  * const texture = new THREE.Texture( imageBitmap );
  * texture.needsUpdate = true;
@@ -49429,12 +49471,6 @@ class ImageBitmapLoader extends Loader {
 
 		}
 
-		if ( typeof fetch === 'undefined' ) {
-
-			warn( 'ImageBitmapLoader: fetch() not supported.' );
-
-		}
-
 		/**
 		 * Represents the loader options.
 		 *
@@ -49444,7 +49480,7 @@ class ImageBitmapLoader extends Loader {
 		this.options = { premultiplyAlpha: 'none' };
 
 		/**
-		 * Used for aborting requests.
+		 * Used for aborting in-flight loads.
 		 *
 		 * @private
 		 * @type {AbortController}
@@ -49474,7 +49510,7 @@ class ImageBitmapLoader extends Loader {
 	/**
 	 * Starts loading from the given URL and pass the loaded image bitmap to the `onLoad()` callback.
 	 *
-	 * @param {string} url - The path/URL of the file to be loaded. This can also be a data URI.
+	 * @param {string} url - A `data:` image URI, or a key that has been stored in {@link Cache} (after {@link LoadingManager#resolveURL}).
 	 * @param {function(ImageBitmap)} onLoad - Executed when the loading process has been finished.
 	 * @param {onProgressCallback} onProgress - Unsupported in this loader.
 	 * @param {onErrorCallback} onError - Executed when errors occur.
@@ -49536,39 +49572,61 @@ class ImageBitmapLoader extends Loader {
 
 		}
 
-		const fetchOptions = {};
-		fetchOptions.credentials = ( this.crossOrigin === 'anonymous' ) ? 'same-origin' : 'include';
-		fetchOptions.headers = this.requestHeader;
-		fetchOptions.signal = ( typeof AbortSignal.any === 'function' ) ? AbortSignal.any( [ this._abortController.signal, this.manager.abortController.signal ] ) : this._abortController.signal;
+		const signal = this._abortController.signal;
+		const managerSignal = this.manager.abortController.signal;
 
-		const promise = fetch( url, fetchOptions ).then( function ( res ) {
+		const promise = Promise.resolve()
+			.then( function () {
 
-			return res.blob();
+				if ( signal.aborted || managerSignal.aborted ) {
 
-		} ).then( function ( blob ) {
+					throw new DOMException( 'The operation was aborted.', 'AbortError' );
 
-			return createImageBitmap( blob, Object.assign( scope.options, { colorSpaceConversion: 'none' } ) );
+				}
 
-		} ).then( function ( imageBitmap ) {
+				if ( ! url.startsWith( 'data:' ) ) {
 
-			Cache.add( `image-bitmap:${url}`, imageBitmap );
+					throw new Error(
+						'ImageBitmapLoader: Network loading is disabled. Use data: URIs or populate THREE.Cache before loading.'
+					);
 
-			if ( onLoad ) onLoad( imageBitmap );
+				}
 
-			scope.manager.itemEnd( url );
+				return dataUriToBlob( url );
 
-		} ).catch( function ( e ) {
+			} )
+			.then( function ( blob ) {
 
-			if ( onError ) onError( e );
+				if ( signal.aborted || managerSignal.aborted ) {
 
-			_errorMap.set( promise, e );
+					throw new DOMException( 'The operation was aborted.', 'AbortError' );
 
-			Cache.remove( `image-bitmap:${url}` );
+				}
 
-			scope.manager.itemError( url );
-			scope.manager.itemEnd( url );
+				return createImageBitmap( blob, Object.assign( scope.options, { colorSpaceConversion: 'none' } ) );
 
-		} );
+			} )
+			.then( function ( imageBitmap ) {
+
+				Cache.add( `image-bitmap:${url}`, imageBitmap );
+
+				if ( onLoad ) onLoad( imageBitmap );
+
+				scope.manager.itemEnd( url );
+
+			} )
+			.catch( function ( e ) {
+
+				if ( onError ) onError( e );
+
+				_errorMap.set( promise, e );
+
+				Cache.remove( `image-bitmap:${url}` );
+
+				scope.manager.itemError( url );
+				scope.manager.itemEnd( url );
+
+			} );
 
 		Cache.add( `image-bitmap:${url}`, promise );
 		scope.manager.itemStart( url );
@@ -49576,7 +49634,7 @@ class ImageBitmapLoader extends Loader {
 	}
 
 	/**
-	 * Aborts ongoing fetch requests.
+	 * Aborts ongoing loads.
 	 *
 	 * @return {ImageBitmapLoader} A reference to this instance.
 	 */
